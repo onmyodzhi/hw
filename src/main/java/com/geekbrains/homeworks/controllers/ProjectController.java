@@ -1,6 +1,7 @@
 package com.geekbrains.homeworks.controllers;
 
-import com.geekbrains.homeworks.model.Project;
+import com.geekbrains.homeworks.model.dtos.ProjectDto;
+import com.geekbrains.homeworks.model.dtos.TimeSheetDto;
 import com.geekbrains.homeworks.services.ProjectService;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -22,33 +23,47 @@ public class ProjectController {
     ProjectService projectService;
 
     @GetMapping
-    public ResponseEntity<List<Project>> getAllProjects() {
+    public ResponseEntity<List<ProjectDto>> getAllProjects() {
         return ResponseEntity.ok().body(projectService.getAllProjects());
     }
 
     @GetMapping("{id}")
-    public ResponseEntity<Project> getProjectById(@PathVariable Long id) {
-        Optional<Project> foundProject = projectService.getProjectById(id);
-        return foundProject.map(project -> ResponseEntity.ok().body(project))
+    public ResponseEntity<ProjectDto> getProjectById(@PathVariable Long id) {
+        Optional<ProjectDto> foundProjectDto = projectService.getProjectById(id);
+        return foundProjectDto.map(project -> ResponseEntity.ok().body(project))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Project> createProject(@RequestBody Project project) {
-        Project createdProject = projectService.saveProject(project);
+    public ResponseEntity<ProjectDto> createProject(@RequestBody ProjectDto projectDto) {
+        Optional<ProjectDto> createdProject = projectService.saveProject(projectDto);
 
-        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
-                .path("/{id}")
-                .buildAndExpand(createdProject.getId())
-                .toUri();
+        if (createdProject.isPresent()) {
+            URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                    .path("/{id}")
+                    .buildAndExpand(createdProject.get().getId())
+                    .toUri();
 
-        return ResponseEntity.created(location).body(createdProject);
+            return ResponseEntity.created(location).body(createdProject.get());
+        }
+
+        return ResponseEntity.badRequest().build();
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Project> updateProject(@PathVariable Long id, @RequestBody Project project) {
-        Optional<Project> updatedProject = projectService.updateProject(id, project);
-        return updatedProject.map(value -> ResponseEntity.ok().body(value)).orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<ProjectDto> updateProject(@PathVariable Long id, @RequestBody ProjectDto projectDto) {
+        Optional<ProjectDto> updatedProject = projectService.updateProject(id, projectDto);
+        return updatedProject.map(value -> ResponseEntity.ok().body(value))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/time-sheets")
+    public ResponseEntity<List<TimeSheetDto>> getTimesheetsByProjectId(@PathVariable Long id) {
+        List<TimeSheetDto> timeSheets = projectService.getTimeSheetsByProjectId(id);
+        if (timeSheets.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok().body(timeSheets);
     }
 
     @DeleteMapping("/{id}")

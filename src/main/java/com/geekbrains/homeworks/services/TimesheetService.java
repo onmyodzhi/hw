@@ -1,7 +1,8 @@
 package com.geekbrains.homeworks.services;
 
-import com.geekbrains.homeworks.model.Project;
 import com.geekbrains.homeworks.model.TimeSheet;
+import com.geekbrains.homeworks.model.dtos.TimeSheetDto;
+import com.geekbrains.homeworks.model.mapers.TimeSheetMapper;
 import com.geekbrains.homeworks.repositories.TimeSheetRepository;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -20,30 +21,31 @@ public class TimesheetService {
     final TimeSheetRepository timesheetRepository;
     ProjectService projectService;
 
-    public Optional<TimeSheet> getTimeSheetById(Long id) {
-        return timesheetRepository.getById(id);
+    public Optional<TimeSheetDto> getTimeSheetById(Long id) {
+        return timesheetRepository.findById(id).map(TimeSheetMapper.INSTANCE::timeSheetToTimeSheetDto);
     }
 
     public List<TimeSheet> getAllTimeSheets() {
-        return timesheetRepository.getAll();
-    }
-
-    public List<TimeSheet> getTimeSheetsByProjectId(Long projectId) {
-        return timesheetRepository.getTimeSheetsByProjectId(projectId);
+        return timesheetRepository.findAll();
     }
 
     public List<TimeSheet> getTimeSheetsByCreatedAtIsAfter(LocalDate date) {
-        return timesheetRepository.getTimeSheetsByCreatedAtIsAfter(date);
+        return timesheetRepository.findAllByCreatedAtAfter(date);
     }
 
-    public Optional<TimeSheet> saveTimeSheet(TimeSheet timeSheet) {
-        Project project = projectService.getProjectById(timeSheet.getProjectId()).orElse(null);
+    public List<TimeSheetDto> getAllTimeSheetsByEmployeeId(Long id) {
+        List<TimeSheet> timeSheets = timesheetRepository.findAllByEmployeeId(id);
 
-        if (project == null) {
-            return Optional.empty();
-        }
+        return timeSheets.stream()
+                .map(TimeSheetMapper.INSTANCE::timeSheetToTimeSheetDto)
+                .toList();
+    }
 
-        return Optional.of(timesheetRepository.save(timeSheet));
+    public Optional<TimeSheetDto> saveTimeSheet(TimeSheetDto timeSheetDto) {
+        return projectService.getProjectById(timeSheetDto.getProjectId())
+                .map(project -> TimeSheetMapper.INSTANCE.timeSheetDtoToTimeSheet(timeSheetDto))
+                .map(timesheetRepository::save)
+                .map(TimeSheetMapper.INSTANCE::timeSheetToTimeSheetDto);
     }
 
     public void deleteTimeSheet(Long id) {

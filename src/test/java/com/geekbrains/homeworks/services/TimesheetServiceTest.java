@@ -1,7 +1,10 @@
 package com.geekbrains.homeworks.services;
 
-import com.geekbrains.homeworks.model.Project;
+import com.geekbrains.homeworks.model.Employee;
 import com.geekbrains.homeworks.model.TimeSheet;
+import com.geekbrains.homeworks.model.dtos.ProjectDto;
+import com.geekbrains.homeworks.model.dtos.TimeSheetDto;
+import com.geekbrains.homeworks.model.mapers.TimeSheetMapper;
 import com.geekbrains.homeworks.repositories.TimeSheetRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -40,12 +44,15 @@ class TimesheetServiceTest {
         timeSheet.setMinutes(120);
         timeSheet.setProjectId(1L);
 
-        when(timesheetService.getTimeSheetById(1L))
+
+        when(timeSheetRepository.findById(1L))
                 .thenReturn(Optional.of(timeSheet));
 
-        Optional<TimeSheet> result = timesheetService.getTimeSheetById(1L);
+        TimeSheetDto expectedTimeSheetDto = TimeSheetMapper.INSTANCE.timeSheetToTimeSheetDto(timeSheet);
+
+        Optional<TimeSheetDto> result = timesheetService.getTimeSheetById(1L);
         assertTrue(result.isPresent());
-        assertEquals(timeSheet, result.get());
+        assertEquals(expectedTimeSheetDto, result.get());
     }
 
     @Test
@@ -72,29 +79,6 @@ class TimesheetServiceTest {
     }
 
     @Test
-    void getTimeSheetsByProjectId() {
-        TimeSheet timeSheet = new TimeSheet();
-        TimeSheet timeSheet1 = new TimeSheet();
-
-        timeSheet.setId(1L);
-        timeSheet.setCreatedAt(LocalDate.now());
-        timeSheet.setMinutes(120);
-        timeSheet.setProjectId(1L);
-        timeSheet1.setId(2L);
-        timeSheet1.setProjectId(2L);
-        timeSheet1.setMinutes(133);
-        timeSheet1.setCreatedAt(LocalDate.now());
-
-        List<TimeSheet> mockTimeSheets = Arrays.asList(timeSheet, timeSheet1);
-
-        when(timesheetService.getTimeSheetsByProjectId(1L))
-                .thenReturn(mockTimeSheets);
-
-        List<TimeSheet> timeSheets = timesheetService.getTimeSheetsByProjectId(1L);
-        assertEquals(mockTimeSheets, timeSheets);
-    }
-
-    @Test
     void getTimeSheetsByCreatedAtIsAfter() {
         TimeSheet timeSheet = new TimeSheet();
         TimeSheet timeSheet1 = new TimeSheet();
@@ -113,7 +97,7 @@ class TimesheetServiceTest {
 
         List<TimeSheet> expectedTimesheets = List.of(timeSheet1);
 
-        when(timeSheetRepository.getTimeSheetsByCreatedAtIsAfter(dateForFilter))
+        when(timeSheetRepository.findAllByCreatedAtAfter(dateForFilter))
                 .thenReturn(expectedTimesheets);
 
         List<TimeSheet> result = timesheetService.getTimeSheetsByCreatedAtIsAfter(dateForFilter);
@@ -121,24 +105,78 @@ class TimesheetServiceTest {
     }
 
     @Test
-    void saveTimeSheet() {
+    void getTimesheetsByProjectId() {
         TimeSheet timeSheet = new TimeSheet();
-        Project project = new Project(1L, "Test Project");
+        TimeSheet timeSheet1 = new TimeSheet();
 
         timeSheet.setId(1L);
         timeSheet.setCreatedAt(LocalDate.now());
         timeSheet.setMinutes(120);
         timeSheet.setProjectId(1L);
+        timeSheet.setEmployeeId(1L);
+        timeSheet1.setId(2L);
+        timeSheet1.setProjectId(2L);
+        timeSheet1.setEmployeeId(2L);
+        timeSheet1.setCreatedAt(LocalDate.now());
+        timeSheet1.setMinutes(130);
+
+        List<TimeSheet> expectedTimesheets = List.of(timeSheet);
+
+        when(timeSheetRepository.findAllByProjectId(1L))
+        .thenReturn(expectedTimesheets);
+
+        List<TimeSheet> result = timeSheetRepository.findAllByProjectId(1L);
+
+        assertEquals(expectedTimesheets, result);
+    }
+
+    @Test
+    void getTimesheetsByEmployeeIdNegative() {
+        TimeSheet timeSheet = new TimeSheet();
+        TimeSheet timeSheet1 = new TimeSheet();
+
+        timeSheet.setId(1L);
+        timeSheet.setCreatedAt(LocalDate.now());
+        timeSheet.setMinutes(120);
+        timeSheet.setProjectId(1L);
+        timeSheet1.setId(2L);
+        timeSheet1.setProjectId(2L);
+        timeSheet1.setCreatedAt(LocalDate.now());
+        timeSheet1.setMinutes(130);
+
+        List<TimeSheet> expectedTimesheets = new ArrayList<>();
+
+        when(timeSheetRepository.findAllByEmployeeId(1L))
+        .thenReturn(expectedTimesheets);
+
+        List<TimeSheet> result = timeSheetRepository.findAllByEmployeeId(1L);
+
+        assertEquals(expectedTimesheets, result);
+    }
+
+    @Test
+    void saveTimeSheet() {
+        TimeSheetDto timeSheetDto = new TimeSheetDto();
+        ProjectDto projectDto = new ProjectDto();
+        projectDto.setName("Test Project");
+
+        timeSheetDto.setId(1L);
+        timeSheetDto.setCreatedAt(LocalDate.now());
+        timeSheetDto.setMinutes(120);
+        timeSheetDto.setProjectId(1L);
+
+        TimeSheet timeSheetToSave = TimeSheetMapper.INSTANCE.timeSheetDtoToTimeSheet(timeSheetDto);
+        timeSheetToSave.setId(1L);
 
         when(projectService.getProjectById(1L))
-                .thenReturn(Optional.of(project));
-        when(timeSheetRepository.save(timeSheet))
-                .thenReturn(timeSheet);
+                .thenReturn(Optional.of(projectDto));
+        when(timeSheetRepository.save(any(TimeSheet.class)))
+                .thenReturn(timeSheetToSave);
 
-        Optional<TimeSheet> result = timesheetService.saveTimeSheet(timeSheet);
+        Optional<TimeSheetDto> result = timesheetService.saveTimeSheet(timeSheetDto);
 
         assertTrue(result.isPresent());
-        assertEquals(timeSheet, result.get());
+        assertEquals(timeSheetDto, result.get());
     }
 
     @Test
